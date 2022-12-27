@@ -1,3 +1,5 @@
+EN | [中文](https://github.com/YYHEggEgg/GIUserAssemblyHelper/blob/main/Tutorial_CN.md)
+
 ## Summary
 
 This passage can help you know what was and is going on about UA. You can also learn how to decrypt cur data by reading this.  (probably :)
@@ -282,7 +284,7 @@ Notice: don't hurrying decoding `query_cur_region` data, only to find stuck with
   
   Got it! You have the private key now.  
   
-  - Then I can decrypt the cur_region data? No!  
+- Then I can decrypt the cur_region data? No!  
   You also should base64-decode the data to Hex format, and split the data **into 256 bytes per part**, then RSA decode each of them (for the RSA key is 2048-bit).
   
 Thank you for your reading!  

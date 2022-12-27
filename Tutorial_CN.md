@@ -1,3 +1,5 @@
+[EN](https://github.com/YYHEggEgg/GIUserAssemblyHelper/blob/main/Tutorial.md) | 中文
+
 ## 提纲
 
 阅读本文，你可以知道 UA 的前世今生，并且学会解 cur 的方法。（大概 :)
@@ -277,7 +279,7 @@ Response Body:
   
   您就得到了 PEM 格式的私钥。
   
-  - 然后就可以愉快地解 cur 了？No！  
+- 然后就可以愉快地解 cur 了？No！  
   您同样需要将数据以 base64 解码为 Hex 格式，并**以 256 字节为单位解密**（因为密钥是 2048 位的）。
 
 感谢您耐心读到这里！
