@@ -8,7 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\HexAPI\HexAPI\HexAPI.csproj" />
+    <ProjectReference Include="..\HexAPI\HexAPI\HexAPI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EggEgg.CSharp-Logger" Version="4.0.1" />
   </ItemGroup>
 
 </Project>

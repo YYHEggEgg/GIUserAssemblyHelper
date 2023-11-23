@@ -1,0 +1,3 @@
+[submodule "HexAPI"]
+	path = HexAPI
+	url = https://github.com/YYHEggEgg/HexAPI
