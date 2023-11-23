@@ -1,13 +1,12 @@
-EN | [中文](https://github.com/YYHEggEgg/GIUserAssemblyHelper/blob/main/Tutorial_CN.md)
+EN | [中文](Tutorial_CN.md)
 
 ## Summary
 
-This passage can help you know what was and is going on about UA. You can also learn how to decrypt cur data by reading this.  (probably :)
-
-1. Introduction
-2. Why were we doing this?  
-3. How is UA Patch created?  
-4. Afterwards - Usage
+1. [Introduction](#introduction)
+2. [Why were we doing this?](#why-were-we-doing-this)
+3. [How is UA Patch created?](#how-is-ua-patch-created)
+4. [Afterwards - Usage](#afterwards---usage)
+5. [Appendix: Timeline of 'Minor' Events](#appendix-timeline-of-minor-events)
 
 ## Introduction
    
@@ -23,7 +22,7 @@ As Ey Sey It, the greatest scientist in 21st century, said that,
 
 To understand this thing, we need to roughly know the process of communication between the client and the Dispatch server.
 
-Dispatch is mainly doingg two tasks: `query_region_list` and `query_cur_region`.
+Dispatch is mainly doing two tasks: `query_region_list` and `query_cur_region`.
 
 After login finished _(or before? It's not important though)_, the client sends `query_region_list` request to Dispatch, mainly use the version as a paramter.
 
@@ -50,10 +49,10 @@ EgkKB2Rldl9naW8...
 - Available server list  
   Consists of the server's type, name, the `query_cur_region` url and other information.
   
-- The whole dispatchSeed  
-  Usually starts with `Ec2b`. To get more information, refer to [this repository](https://github.com/Colerar/Ec2b).
+- The whole `client_secret_key`  
+  Usually starts with `Ec2b`, or we can say it's using Ec2b format. It can be used to generate `server_secret_key` (often called `dispatchKey`).
   
-- `client_custom_config`, or the related config of client. Has been XORed with dispatchKey.
+- `client_custom_config`, or the related config of client. Has been XORed with `dispatchKey`.
 
 If there's more than one region, the client will list available servers.
 
@@ -84,24 +83,24 @@ The response is in json format, containing `content` and `sign`, which are both 
 
 To make the relationship between they and encryption clear, we might as well call:
 
-- keys used to encrypt/decrypt `content` as `S1Pub, S1Pri`;
-- keys used to encrypt/decrypt `sign` as `S2Pub, S2Pri`;
+- keys used to encrypt/decrypt `content` as `ClientPub, ClientPri`;
+- keys used to encrypt/decrypt `sign` as `ServerPub, ServerPri`;
 
-`content` is encrypted with the public key, and should be decrypted with the private key;
+`content` is the Protobuf content that has been encrypted with the public key, and should be decrypted with the private key;
 
 But `sign` goes to its opposite. It uses, more precisely, the private key to sign, and the client use the public key to verify the signature.
 
-Since they are both encrypted by the server, the client can do nothing but decrypt them. So, the client does have 2 keys used for decryption `S1Pri, S2Pub`, hiding in our topic `UserAssembly.dll`.
+Since they are both encrypted by the server, the client can do nothing but decrypt them. So, the client does have 2 keys used for decryption `ClientPri, ServerPub`, hiding in our topic `UserAssembly.dll`.
 
-Because the exponent is fixed (in fact provided), we can use the private key to generate public key, so `S1Pub` is also known to us.
+Because the exponent is fixed (in fact provided), we can use the private key to generate public key, so `ClientPub` is also known to us.
 
-Finally, we only leave `S2Pri` unknown. The anime game company reached its goal: `sign` is originally created for verifying the server. Without private key, there's no way to generate a proper signature.
+Finally, we only leave `ServerPri` unknown. The anime game company reached its goal: `sign` is originally created for verifying the server. Without private key, there's no way to generate a proper signature.
 
-> Actually, the earlist `query_cur_region` only returns a base64 string, just like `query_region_list`. You can refer to [Dispatch implementation at that time](https://github.com/Grasscutters/Grasscutter/blob/41365c38d7bf143f7263b90e891401ae820320d9/src/main/java/emu/grasscutter/server/dispatch/DispatchServer.java#L134).
+> Actually, the earlist `query_cur_region` only returns a base64 string (raw Protobuf data), just like `query_region_list`. You can refer to [Dispatch implementation at that time](https://github.com/Grasscutters/Grasscutter/blob/41365c38d7bf143f7263b90e891401ae820320d9/src/main/java/emu/grasscutter/server/dispatch/DispatchServer.java#L134).
 
 > This change was first noticed when the 2.7.5 (or 2.8 Beta) was running, in which version the anime game company implemented various protections to avoid PS from expanding, not only dispatch but also encryption of KCP traffic and so on.
 
-Thererfore, the solution is: generate a pair `S2Pub', S2Pri'` by ourselves, and use `S2Pub'` to replace `S2Pub` in `UserAssembly.dll`, so that the client can trust the server. 
+Thererfore, the solution is: generate a pair `ServerPub', ServerPri'` by ourselves, and use `ServerPub'` to replace `ServerPub` in `UserAssembly.dll`, so that the client can trust the server. 
 
 ## How is UA Patch created?
 
@@ -123,17 +122,13 @@ To sum up, after dropping useless parts and connecting valid parts together, we 
 
 This is a program based on this trick, which is hosted on GitHub: [GIUserAssemblyHelper](https://github.com/YYHEggEgg/GIUserAssemblyHelper)
 
-Because the certain anime game have protection of UA since 33.0 version, we no longer use UA Patch, so I don't bother writing replace feature. :D
-
-If you want to know, after you get the RSA key values (the one in the file and another one you want to write into), split them into 8-bits long parts, find the original one and replace it. It's not hard though.
-
 ## Afterwards - Usage
 
-Notice: don't hurrying decoding `query_cur_region` data, only to find stuck with following problems: 
+Notice: don't directly use gotten C# XML Key, only to find stuck with following problems: 
 
-- The program outputs 2 RSAKeyValues. Obviously, you can guess the longer one is the private key (`S1Pri`), and the shorter one is the public key (`S2Pub`).
+- The program outputs 2 RSAKeyValues. Obviously, you can guess the longer one is the private key (`ClientPri`), and the shorter one is the public key (`ServerPub`).
 
-- It outputs is neither PEM format nor other, but probably a common format in Unity. (?)  
+- It outputs is neither PEM format nor other, but a common format in C# (or .NET).  
   For a public key, it's two paramters `Modulus` and `Exponent`. You may refer to the RSA encryption process.   
   
   By using software like **openssl**, you can generate PEM format keys from Modulus and Exponent.
@@ -284,11 +279,22 @@ Notice: don't hurrying decoding `query_cur_region` data, only to find stuck with
   
   Got it! You have the private key now.  
   
-- Then I can decrypt the cur_region data? No!  
-  You also should base64-decode the data to Hex format, and split the data **into 256 bytes per part**, then RSA decode each of them (for the RSA key is 2048-bit).
-  
-Thank you for your reading!  
+  - Some programs may require `.der` as the key format. For information on converting PEM to other formats, readers are encouraged to search for it themselves.
 
-Go to have a try!  
+Thank you for reading this far!
 
-Try to capture a `query_cur_region` and decode it!
+<details> <summary>Here comes the ad time!</summary>
+Confused by various concepts in the article? Lack of automated tools?
+
+[YYHEggEgg/csharp-Protoshift](https://github.com/YYHEggEgg/csharp-Protoshift) provides many useful features for your daily work, including `query_cur_region` encryption/decryption (with **signature verification**), Ec2b decryption, XOR key generation based on MT19937, Protobuf serialization/deserialization, and more.
+
+It supports loading RSA keys in PEM format (PKCS1, PKCS8), as well as directly loading RSA keys in C# XML format, and supports loading private keys instead of public keys.
+
+`csharp-Protoshift` is actually not designed as a tool program. For more dedicated and convenient tool releases, you can also join the [Discord server](https://discord.gg/NcAjuCSFvZ) to get the latest news!
+</details>
+
+## Appendix: Timeline of 'Minor' Events
+
+- `2.8_rel`: RSA-based `query_cur_region` validity verification and KCP channel encryption were introduced for the first time. At this time, most RSA patches were completed by patching `global-metadata.dat`.
+- `3.1_rel`: `global-metadata` was migrated to `MHY0` format, and the decryptor for it has not appeared as of the revision of this article. `RSAKeyValue` can be found in `UserAssembly.dll` and UA Patch can be performed.
+- `3.3_rel`: `HomoKProtect.sys` went online, and modifying `UserAssembly.dll` would prevent the game from starting.

@@ -1,13 +1,12 @@
-[EN](https://github.com/YYHEggEgg/GIUserAssemblyHelper/blob/main/Tutorial.md) | 中文
+[EN](Tutorial.md) | 中文
 
 ## 提纲
 
-阅读本文，你可以知道 UA 的前世今生，并且学会解 cur 的方法。（大概 :)
-
-1. 引入 
-2. 为什么要补丁 UA？
-3. UA补丁到底是如何开发的？
-4. 后记：实际使用
+1. [引入](#引入)
+2. [为什么要补丁 UA？](#为什么要补丁-ua)
+3. [UA补丁到底是如何开发的？](#ua补丁到底是如何开发的)
+4. [后记：实际使用](#后记实际使用)
+5. [附录：小事时间线](#附录小事时间线)
 
 ## 引入
 
@@ -50,10 +49,10 @@ EgkKB2Rldl9naW8...
 - 可选的区服列表  
   包含了区服类型，名称，`query_cur_region` 的 url 等信息。
   
-- 完整的 dispatchSeed  
-  通常以 Ec2b 开头。更多资料可以移步[该存储库](https://github.com/Colerar/Ec2b)。
+- 完整的 `client_secret_key`  
+  通常以 Ec2b 开头，我们也可称它使用 Ec2b 格式。它可以用于生成 `server_secret_key`（有时称之为 `dispatchKey`）。
   
-- `client_custom_config`，客户端相关配置。与 dispatchKey 进行了异或加密。
+- `client_custom_config`，客户端相关配置。与 `dispatchKey` 进行了异或加密。
 
 如果区服不止一个的话，客户端应该会列出可选的区服。
 
@@ -84,22 +83,22 @@ Response Body:
 
 为了讲清楚它们与加密间的关系，我们不妨设：
 
-- `content` 加解密所用的一对密钥为 `S1Pub, S1Pri`；
-- `sign` 加解密所用的一对密钥为 `S2Pub, S2Pri`。
+- `content` 加解密所用的一对密钥为 `ClientPub, ClientPri`；
+- `sign` 加解密所用的一对密钥为 `ServerPub, ServerPri`。
 
-`content` 就是正文内容，是典型的公钥加密，私钥解密；而 `sign` 正好反过来，更确切的说，是私钥签名，公钥验签。
+`content` 就是 Protobuf 正文内容，是典型的公钥加密，私钥解密；而 `sign` 正好反过来，更确切的说，是私钥签名，公钥验签。
 
-按理来说，既然都是服务端负责加密，客户端也就只有解密的份。因此，客户端具有的正是两个用于解密的密钥 `S1Pri, S2Pub`，而它们都藏在主角 `UserAssembly.dll` 里。
+按理来说，既然都是服务端负责加密，客户端也就只有解密的份。因此，客户端具有的正是两个用于解密的密钥 `ClientPri, ServerPub`，而它们都藏在主角 `UserAssembly.dll` 里。
 
-由于指数固定（事实上甚至已经给出），我们可以使用私钥来生成公钥，因此 `S1Pub` 同样已知。
+我们可以使用私钥来生成公钥，因此 `ClientPub` 同样已知。
 
-最终，我们只有 `S2Pri` 未知。而开发者达到了它的目的：`sign` 字段本就为了验证服务器而生，没有私钥就没有办法生成可用的签名文件。
+最终，我们只有 `ServerPri` 未知。而开发者达到了它的目的：`sign` 字段本就为了验证服务器而生，没有私钥就没有办法生成可用的签名文件。
 
-> 事实上，最早的 `query_cur_region` 一样只返回一个 base64 字符串。可以去看看[当时的 dispatch 实现](https://github.com/Grasscutters/Grasscutter/blob/41365c38d7bf143f7263b90e891401ae820320d9/src/main/java/emu/grasscutter/server/dispatch/DispatchServer.java#L134)就是这样直接处理的。
+> 事实上，最早的 `query_cur_region` 一样只返回一个 base64 字符串，直接是 Protobuf 内容。可以去看看[当时的 dispatch 实现](https://github.com/Grasscutters/Grasscutter/blob/41365c38d7bf143f7263b90e891401ae820320d9/src/main/java/emu/grasscutter/server/dispatch/DispatchServer.java#L134)就是这样直接处理的。
 
 > 首次观测到这样的改动是在 2.7.5（即 2.8 测试服）时，在这个版本开发者上线了大量阻止私服继续扩张的手段，除了 dispatch 还有对 KCP 流量的加密手段等等。
 
-因此，解决方案是：自己生成一对 `S2Pub',S2Pri'` 使用，并用 `S2Pub'` 替换掉 `UserAssembly.dll` 里原有的 `S2Pub`，使得客户端信任服务器。
+因此，解决方案是：自己生成一对 `ServerPub',ServerPri'` 使用，并用 `ServerPub'` 替换掉 `UserAssembly.dll` 里原有的 `ServerPub`，使得客户端信任服务器。
 
 ## UA补丁到底是如何开发的？
 
@@ -121,15 +120,13 @@ Response Body:
 
 这是一个根据该原理写出的程序，托管在 Github 上：[GIUserAssemblyHelper](https://github.com/YYHEggEgg/GIUserAssemblyHelper)
 
-由于某二游在 33.0 版本后加入了对 UA 的保护，因此我们不再使用 UA Patch，所以替换的部分就鸽了（doge），这个程序目前只支持读取。如果非要说的话，其实拿到 RSA Key 的值以后，再按八位为一组，在源文件里查找并替换为你想要的值即可。
-
 ## 后记：实际使用
 
-请注意：不要跑完程序之后就去激动地解 cur，否则可能会一脸懵逼的遇到以下问题：
+请注意：不要跑完程序之后就直接使用得到的 C# XML key，否则可能会一脸懵逼的遇到以下问题：
 
-- 程序输出的有两串 RSAKeyValue，显然感性猜测一定能知道长的是私钥（`S1Pri`），短的是公钥（`S2Pub`）。
+- 程序输出的有两串 RSAKeyValue，显然感性猜测一定能知道长的是私钥（`ClientPri`），短的是公钥（`ServerPub`）。
 
-- 它输出的既不是 PEM 格式也不是其他的格式，而可能是 Unity（？）里面一种常用的格式。  
+- 它输出的既不是 PEM 格式也不是其他的格式，而是 C#（或 .NET）里面一种常用的格式。  
   对于公钥，它使用的是两个参数 `Modulus`（模数）和 `Exponent`（指数）。具体可以参考 RSA 加密的原理。  
   您可以通过 openssl 等软件通过模数和指数生成 PEM 格式的密钥。
   
@@ -278,12 +275,23 @@ Response Body:
   ```
   
   您就得到了 PEM 格式的私钥。
-  
-- 然后就可以愉快地解 cur 了？No！  
-  您同样需要将数据以 base64 解码为 Hex 格式，并**以 256 字节为单位解密**（因为密钥是 2048 位的）。
+
+- 某些程序可能需求 `.der` 作为密钥格式。有关 PEM 转换为其他格式的资料还请读者自行查询。
 
 感谢您耐心读到这里！
   
-去踏出第一步吧！
+<details> <summary>下面是广告时间！</summary>
+对文中的各种概念一头雾水？缺少自动化的工具？
 
-试着抓下一个 `query_cur_region` 并解密！
+[YYHEggEgg/csharp-Protoshift](https://github.com/YYHEggEgg/csharp-Protoshift) 可以支持包括 `query_cur_region` 加解密（以及**验证签名**）、Ec2b 解密、基于 MT19937 的 XOR Key 生成、Protobuf 序列化/反序列化等诸多有助于您日常工作的功能。
+
+它支持加载 PKCS1、PKCS8 的 PEM 格式 RSA 密钥，以及**直接加载 C# XML 格式的 RSA 密钥**，并且支持以私钥代替公钥加载。
+
+`csharp-Protoshift` 实际上不是专被设计成此类工具的程序。有关更为专用与便捷的工具发布，也可以加入 [Discord 服务器](https://discord.gg/NcAjuCSFvZ) 来获取最新消息！
+</details>
+
+## 附录：小事时间线
+
+- `2.8_rel`：首次加入了基于 RSA 的 `query_cur_region` 有效性验证和 KCP 信道加密。此时 RSA Patch 大多由 Patch `global-metadata.dat` 完成。
+- `3.1_rel`：`global-metadata` 迁移至了 `MHY0` 格式，其 decryptor 在本文修订时仍未出现。`UserAssembly.dll` 中可以找到 `RSAKeyValue` 并执行 UA Patch。
+- `3.3_rel`：`HomoKProtect.sys` 上线，更改文件 `UserAssembly.dll` 将无法启动游戏。
