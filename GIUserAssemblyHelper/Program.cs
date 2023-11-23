@@ -78,8 +78,15 @@ internal class Program
             for (int i = 0; i < left_keys; i++)
             {
                 Log.Info($"Paste the corresponding key (index: {i}) below: or press Ctrl+C to exit.");
-                var newkey = Console.ReadLine() ?? string.Empty;
                 var corresponding = outputs[i];
+                Log.Info($"Suggestion: This key is a {(corresponding.Contains("InverseQ") ? "Private" : "Public")} key. Type 'n' to skip so as not to patch it.");
+
+                var newkey = Console.ReadLine()?.Trim() ?? string.Empty;
+                if (newkey.ToLower() == "n")
+                {
+                    Log.Info($"OK, skip key {i}.");
+                    continue;
+                }
                 if (corresponding.Length != newkey.Length)
                 {
                     Log.Erro($"The new key should have the size equal to the previous one.");
