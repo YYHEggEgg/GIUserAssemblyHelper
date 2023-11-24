@@ -55,9 +55,6 @@ jobs:
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
-    env:
-      Solution_Name: GIUserAssemblyHelper                       # Replace with your solution name, i.e. MyWpfApp.sln.
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -79,12 +76,12 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+      run: cd GIUserAssemblyHelper ; dotnet build --configuration $env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: Release
+        name: Release-net6.0
         path: GIUserAssemblyHelper\bin\Release\net6.0
