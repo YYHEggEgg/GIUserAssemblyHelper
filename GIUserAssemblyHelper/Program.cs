@@ -21,7 +21,7 @@ internal class Program
             console_Minimum_LogLevel: LogLevel.Information,
 #endif
             debug_LogWriter_AutoFlush: true,
-            enable_Detailed_Time: true
+            enable_Detailed_Time: false
         ));
         Log.Info("Type the UserAssembly.dll path");
         string? path = Console.ReadLine()?.Trim();
@@ -43,7 +43,7 @@ internal class Program
             List<Int64> valid_data_chunks = new();
 
             string output = "";
-            for (Int64 i = index; !output.Contains("</RSAKeyValue>");)
+            for (Int64 i = index; !output.Contains("</RSA");)
             {
                 // Read 8 bytes
                 output += Encoding.Default.GetString(fileHexObject.GetRange(i, 8));
@@ -60,11 +60,14 @@ internal class Program
                     }
                 }
             }
+            var suffixpolicy = output.Length - output.LastIndexOf('<');
+            if (suffixpolicy > 0) output += "</RSAKeyValue>".Substring(suffixpolicy);
 
             // Cut off invisible chars at the end
             int end = output.LastIndexOf("</RSAKeyValue>") + 14;
             output = output.Substring(0, end);
-            Log.Info($"Found key (relative index: {outputs.Count}: {output}");
+            Log.Info($"Found key (relative index: {outputs.Count}):");
+            Log.Info(output);
             valid_data_chunk_collection.Add(valid_data_chunks);
             outputs.Add(output);
         }
@@ -89,18 +92,19 @@ internal class Program
                 }
                 if (corresponding.Length != newkey.Length)
                 {
-                    Log.Erro($"The new key should have the size equal to the previous one.");
+                    Log.Erro($"The new key should have the size equal to the previous one. (previous: {corresponding.Length} != patch: {newkey.Length})");
                     Log.Erro($"Please enter a correct key again.");
                     i--;
                     continue;
                 }
                 // Prepare for writing content
+                Span<byte> newkeyBytes = new(Encoding.Default.GetBytes(newkey));
+                Debug.Assert(newkeyBytes.Length == Encoding.Default.GetByteCount(corresponding));
                 Queue<byte[]> writes = new();
-                for (int j = 0; j < newkey.Length; j += 8)
+                for (int j = 0; j < newkeyBytes.Length; j += 8)
                 {
-                    var chunkStr = newkey.Substring(j, Math.Min(newkey.Length - i, 8));
-                    Debug.Assert(Encoding.Default.GetByteCount(chunkStr) == 8);
-                    writes.Enqueue(Encoding.Default.GetBytes(chunkStr));
+                    var chunk = newkeyBytes.Slice(j, Math.Min(newkey.Length - j, 8));
+                    writes.Enqueue(chunk.ToArray());
                 }
 
                 // Get the offset and actual replace
