@@ -25,6 +25,8 @@ internal class Program
         ));
         Log.Info("Type the UserAssembly.dll path");
         string? path = Console.ReadLine()?.Trim();
+        // Dragging fix
+        if (path != null && path.StartsWith('\"') && path.EndsWith('\"')) path = path.Substring(1, path.Length - 2);
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
             Log.Erro($"Please enter a valid path!");
@@ -68,6 +70,7 @@ internal class Program
             output = output.Substring(0, end);
             Log.Info($"Found key (relative index: {outputs.Count}):");
             Log.Info(output);
+            Log.Dbug($"Parsed as HEX: \n{Convert.ToHexString(Encoding.Default.GetBytes(output))}");
             valid_data_chunk_collection.Add(valid_data_chunks);
             outputs.Add(output);
         }
